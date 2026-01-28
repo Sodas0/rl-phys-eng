@@ -48,10 +48,10 @@ int main(int argc, char *argv[]) {
 
     // Bulk spawn for stress testing
     world_spawn_random(&world, 69,
-        50, 50,      // min x, y
-        750, 300,    // max x, y
-        20, 50,      // radius range
-        1.0f, 1.0f); // restitution range
+        50, 50,                              // min x, y (margin for radius)
+        WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50,  // max x, y (margin for radius)
+        20, 50,                              // radius range
+        1.0f, 1.0f);                         // restitution range
 
     printf("Spawned %d bodies\n", world.body_count);
     
