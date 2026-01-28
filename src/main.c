@@ -5,7 +5,6 @@ int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
 
-    //TODO: render initialization should be in a separate function
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *window = SDL_CreateWindow("2D phys-eng",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,

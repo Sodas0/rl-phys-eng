@@ -1,3 +1,10 @@
+# Build artifacts
+build/
+phys-engine
+
+# IDE
 .cursor/
 .vscode/
-phys-engine
+
+# OS
+.DS_Store
