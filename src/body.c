@@ -12,6 +12,10 @@ Body body_create(Vec2 pos, float radius, float mass, float restitution) {
     return b;
 }
 
+Body body_default(Vec2 pos, float radius) {
+    return body_create(pos, radius, 1.0f, 0.8f);
+}
+
 Body body_create_static(Vec2 pos, float radius) {
     Body b;
     b.position = pos;

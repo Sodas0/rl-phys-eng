@@ -5,6 +5,8 @@
 #include <SDL.h>
 
 #define MAX_BODIES 256
+#define MAX_COLLISIONS 512    // Worst case: n*(n-1)/2 for 256 bodies
+#define SOLVER_ITERATIONS 6   // Tune: 4-8 typical for stable stacking
 
 typedef struct {
     Body bodies[MAX_BODIES];
@@ -37,5 +39,18 @@ void world_step(World *w);
 
 // Render all bodies with debug info (velocity vectors, centers)
 void world_render_debug(World *w, SDL_Renderer *r);
+
+// --- Spawn Helpers (for testing/bulk creation) ---
+
+// Spawn a grid of bodies. Returns number of bodies added.
+// Origin is top-left of grid. Spacing is center-to-center distance.
+int world_spawn_grid(World *w, int rows, int cols, Vec2 origin, float spacing,
+                     float radius, float mass, float restitution);
+
+// Spawn bodies at random positions within bounds. Returns number added.
+// Uses simple pseudo-random; call srand() beforehand for variety.
+int world_spawn_random(World *w, int count, float x_min, float y_min,
+                       float x_max, float y_max, float min_radius, float max_radius,
+                       float min_restitution, float max_restitution);
 
 #endif // WORLD_H

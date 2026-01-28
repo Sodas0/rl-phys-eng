@@ -1,7 +1,7 @@
 #include "world.h"
 #include "render.h"
 #include "collision.h"
-#include <stdio.h>
+#include <stdlib.h>  // For rand()
 
 void world_init(World *w, Vec2 gravity, float dt) {
     w->body_count = 0;
@@ -79,29 +79,119 @@ static void resolve_boundary_collisions(World *w) {
     }
 }
 
-static void detect_body_collisions(World *w) {
-    for (int i = 0; i < w->body_count; i++) {
-        for (int j = i + 1; j < w->body_count; j++) {
+// Detect all body-body collisions and store in array.
+// Returns the number of collisions detected.
+static int detect_all_collisions(World *w, Collision *collisions, int max_collisions) {
+    int count = 0;
+    
+    for (int i = 0; i < w->body_count && count < max_collisions; i++) {
+        for (int j = i + 1; j < w->body_count && count < max_collisions; j++) {
             Collision col;
             if (collision_detect_circles(&w->bodies[i], &w->bodies[j], &col)) {
                 col.body_a = i;
                 col.body_b = j;
-                printf("collision detected: body %d and body %d\n", i, j);
+                collisions[count++] = col;
             }
         }
     }
+    
+    return count;
 }
 
 // --- Public API ---
 
 void world_step(World *w) {
+    // Step 1: Integrate velocities and positions
     integrate_bodies(w);
-    resolve_boundary_collisions(w);
-    detect_body_collisions(w);
+    
+    // Step 2: Iterative collision solver
+    // Re-detecting each iteration handles cascading collisions
+    static Collision collisions[MAX_COLLISIONS];
+    
+    for (int iter = 0; iter < SOLVER_ITERATIONS; iter++) {
+        // Detect all body-body collisions fresh each iteration
+        int collision_count = detect_all_collisions(w, collisions, MAX_COLLISIONS);
+        
+        // Resolve each body-body collision
+        for (int i = 0; i < collision_count; i++) {
+            Body *a = &w->bodies[collisions[i].body_a];
+            Body *b = &w->bodies[collisions[i].body_b];
+            collision_resolve(a, b, &collisions[i]);
+        }
+        
+        // Resolve boundaries last - ensures bodies stay inside world
+        resolve_boundary_collisions(w);
+    }
 }
 
 void world_render_debug(World *w, SDL_Renderer *r) {
     for (int i = 0; i < w->body_count; i++) {
         render_body_debug(r, &w->bodies[i]);
     }
+}
+
+// --- Spawn Helpers ---
+
+int world_spawn_grid(World *w, int rows, int cols, Vec2 origin, float spacing,
+                     float radius, float mass, float restitution) {
+    int added = 0;
+    
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            Vec2 pos = vec2(
+                origin.x + col * spacing,
+                origin.y + row * spacing
+            );
+            
+            Body b = body_create(pos, radius, mass, restitution);
+            // Give each body a slightly different color based on position
+            b.color = (SDL_Color){
+                (Uint8)(100 + (col * 30) % 156),
+                (Uint8)(100 + (row * 40) % 156),
+                (Uint8)(200),
+                255
+            };
+            
+            if (world_add_body(w, b) >= 0) {
+                added++;
+            }
+        }
+    }
+    
+    return added;
+}
+
+int world_spawn_random(World *w, int count, float x_min, float y_min,
+                       float x_max, float y_max, float min_radius, float max_radius,
+                       float min_restitution, float max_restitution) {
+    int added = 0;
+    
+    for (int i = 0; i < count; i++) {
+        // Random position within bounds
+        float x = x_min + ((float)rand() / RAND_MAX) * (x_max - x_min);
+        float y = y_min + ((float)rand() / RAND_MAX) * (y_max - y_min);
+        
+        // Random radius
+        float radius = min_radius + ((float)rand() / RAND_MAX) * (max_radius - min_radius);
+        
+        // Random restitution (bounciness)
+        float restitution = min_restitution + ((float)rand() / RAND_MAX) * (max_restitution - min_restitution);
+        
+        // Random color
+        SDL_Color color = {
+            (Uint8)(rand() % 156 + 100),
+            (Uint8)(rand() % 156 + 100),
+            (Uint8)(rand() % 156 + 100),
+            255
+        };
+        
+        Body b = body_create(vec2(x, y), radius, 1.0f, restitution);
+        b.color = color;
+        
+        if (world_add_body(w, b) >= 0) {
+            added++;
+        }
+    }
+    
+    return added;
 }
