@@ -89,6 +89,7 @@ static void resolve_boundary_collisions(World *w) {
 static int detect_all_collisions(World *w, Collision *collisions, int max_collisions) {
     int count = 0;
     
+    //TODO: optimize the collision detection algorithm
     for (int i = 0; i < w->body_count && count < max_collisions; i++) {
         for (int j = i + 1; j < w->body_count && count < max_collisions; j++) {
             Collision col;
@@ -105,6 +106,7 @@ static int detect_all_collisions(World *w, Collision *collisions, int max_collis
 
 // --- Public API ---
 
+// MAIN PHYSICS STEP FUNCTION 
 void world_step(World *w) {
     // Step 1: Integrate velocities and positions
     integrate_bodies(w);

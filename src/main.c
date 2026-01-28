@@ -8,7 +8,7 @@
 #define WINDOW_WIDTH 1800
 #define WINDOW_HEIGHT 600
 
-
+//TODO: make main function more concise
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -38,22 +38,24 @@ int main(int argc, char *argv[]) {
     // Big red ball
     b = body_default(vec2(400, 100), 60.0f);
     b.color = (SDL_Color){255, 100, 100, 255};
+    b.restitution = 1.0f;
     world_add_body(&world, b);
 
     // Green ball moving right
     b = body_default(vec2(200, 50), 30.0f);
     b.velocity = vec2(100, 0);
     b.color = (SDL_Color){100, 255, 100, 255};
+    b.restitution = 1.0f;
     world_add_body(&world, b);
 
     // Bulk spawn for stress testing
-    world_spawn_random(&world, 69,
-        50, 50,                              // min x, y (margin for radius)
-        WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50,  // max x, y (margin for radius)
-        20, 50,                              // radius range
-        1.0f, 1.0f);                         // restitution range
+    // world_spawn_random(&world, 69,
+    //     50, 50,                              // min x, y (margin for radius)
+    //     WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50,  // max x, y (margin for radius)
+    //     20, 50,                              // radius range
+    //     1.0f, 1.0f);                         // restitution range
 
-    printf("Spawned %d bodies\n", world.body_count);
+    // printf("Spawned %d bodies\n", world.body_count);
     
 
     int running = 1;
