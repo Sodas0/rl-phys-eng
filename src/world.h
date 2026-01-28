@@ -11,10 +11,20 @@ typedef struct {
     int body_count;
     Vec2 gravity;
     float dt;  // Fixed timestep
+    
+    // World boundaries (for constraining bodies)
+    float bound_left;
+    float bound_right;
+    float bound_top;
+    float bound_bottom;
+    int bounds_enabled;
 } World;
 
 // Initialize world with gravity vector and fixed timestep
 void world_init(World *w, Vec2 gravity, float dt);
+
+// Set world boundaries (left, top, right, bottom)
+void world_set_bounds(World *w, float left, float top, float right, float bottom);
 
 // Add a body to the world. Returns body index, or -1 if full
 int world_add_body(World *w, Body b);
