@@ -42,8 +42,14 @@ int main(int argc, char *argv[]) {
     // === Simple circle-rect collision test ===
 
     // Static rectangle platform at the bottom
-    b = body_create_static_rect(vec2(300, 500), 400.0f, 40.0f);
+    b = body_create_rect(vec2(300, 500), 400.0f, 40.0f, 1.0f, 0.8f);
     b.color = (SDL_Color){100, 100, 100, 255};
+    world_add_body(&world, b);
+
+    // Spinning rectangle
+    b = body_create_rect(vec2(300, 300), 100.0f, 60.0f, 1.0f, 0.8f);
+    b.color = (SDL_Color){100, 150, 255, 255};
+    b.angle = 0.5f;  // ~28 degrees
     world_add_body(&world, b);
 
     // Circle that falls onto the platform

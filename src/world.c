@@ -68,6 +68,60 @@ static void integrate_bodies(World *w) {
     }
 }
 
+// --- Shape vs Plane helpers ---
+// Boundaries are treated as infinite static planes.
+
+static void resolve_circle_vs_bounds(Body *b, float left, float top, float right, float bottom) {
+    float radius = b->shape.circle.radius;
+    
+    // Left wall
+    if (b->position.x - radius < left) {
+        b->position.x = left + radius;
+        b->velocity.x = -b->velocity.x * b->restitution;
+    }
+    // Right wall
+    if (b->position.x + radius > right) {
+        b->position.x = right - radius;
+        b->velocity.x = -b->velocity.x * b->restitution;
+    }
+    // Ceiling (top)
+    if (b->position.y - radius < top) {
+        b->position.y = top + radius;
+        b->velocity.y = -b->velocity.y * b->restitution;
+    }
+    // Floor (bottom)
+    if (b->position.y + radius > bottom) {
+        b->position.y = bottom - radius;
+        b->velocity.y = -b->velocity.y * b->restitution;
+    }
+}
+
+static void resolve_rect_vs_bounds(Body *b, float left, float top, float right, float bottom) {
+    float half_w = b->shape.rect.width * 0.5f;
+    float half_h = b->shape.rect.height * 0.5f;
+    
+    // Left wall
+    if (b->position.x - half_w < left) {
+        b->position.x = left + half_w;
+        b->velocity.x = -b->velocity.x * b->restitution;
+    }
+    // Right wall
+    if (b->position.x + half_w > right) {
+        b->position.x = right - half_w;
+        b->velocity.x = -b->velocity.x * b->restitution;
+    }
+    // Ceiling (top)
+    if (b->position.y - half_h < top) {
+        b->position.y = top + half_h;
+        b->velocity.y = -b->velocity.y * b->restitution;
+    }
+    // Floor (bottom)
+    if (b->position.y + half_h > bottom) {
+        b->position.y = bottom - half_h;
+        b->velocity.y = -b->velocity.y * b->restitution;
+    }
+}
+
 static void resolve_boundary_collisions(World *w) {
     if (!w->bounds_enabled) return;
     
@@ -75,30 +129,12 @@ static void resolve_boundary_collisions(World *w) {
         Body *b = &w->bodies[i];
         if (body_is_static(b)) continue;
         
-        // Skip rectangles for now - proper boundary collision comes later
-        if (b->shape.type == SHAPE_RECT) continue;
-        
-        float radius = b->shape.circle.radius;
-        
-        // Left wall
-        if (b->position.x - radius < w->bound_left) {
-            b->position.x = w->bound_left + radius;
-            b->velocity.x = -b->velocity.x * b->restitution;
-        }
-        // Right wall
-        if (b->position.x + radius > w->bound_right) {
-            b->position.x = w->bound_right - radius;
-            b->velocity.x = -b->velocity.x * b->restitution;
-        }
-        // Ceiling (top)
-        if (b->position.y - radius < w->bound_top) {
-            b->position.y = w->bound_top + radius;
-            b->velocity.y = -b->velocity.y * b->restitution;
-        }
-        // Floor (bottom)
-        if (b->position.y + radius > w->bound_bottom) {
-            b->position.y = w->bound_bottom - radius;
-            b->velocity.y = -b->velocity.y * b->restitution;
+        if (b->shape.type == SHAPE_CIRCLE) {
+            resolve_circle_vs_bounds(b, w->bound_left, w->bound_top, 
+                                     w->bound_right, w->bound_bottom);
+        } else if (b->shape.type == SHAPE_RECT) {
+            resolve_rect_vs_bounds(b, w->bound_left, w->bound_top,
+                                   w->bound_right, w->bound_bottom);
         }
     }
 }
