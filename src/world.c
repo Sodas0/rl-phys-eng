@@ -108,7 +108,7 @@ static int detect_all_collisions(World *w, Collision *collisions, int max_collis
 
 // MAIN PHYSICS STEP FUNCTION 
 void world_step(World *w) {
-    // Step 1: Integrate velocities and positions
+    // Step 1: Integrate velocities and positions (dynamics)
     integrate_bodies(w);
     
     // Step 2: Iterative collision solver

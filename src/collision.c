@@ -17,6 +17,8 @@ static void collision_positional_correction(Body *a, Body *b, Collision *col) {
     b->position = vec2_add(b->position, vec2_scale(correction_vec, b->inv_mass));
 }
 
+
+//TODO: add collision resolution for other shapes as well.
 // --- Impulse-Based Collision Resolution ---
 void collision_resolve(Body *a, Body *b, Collision *col) {
     // Early exit: both bodies are static

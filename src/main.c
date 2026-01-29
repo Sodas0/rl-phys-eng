@@ -5,7 +5,7 @@
 #include "world.h"
 
 // Window dimensions
-#define WINDOW_WIDTH 1800
+#define WINDOW_WIDTH 600
 #define WINDOW_HEIGHT 600
 
 //TODO: make main function more concise
@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
 
     // === Initialize physics world ===
     World world;
+    //TODO: make gravity in m/s^2, and not pixels/frame
     world_init(&world, vec2(0, 200.0f), 1.0f / 60.0f);  // Stronger gravity for fun
     world_set_bounds(&world, 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT);
     
