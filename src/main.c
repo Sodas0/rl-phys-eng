@@ -72,6 +72,13 @@ int main(int argc, char *argv[]) {
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
+            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R) {
+                if (scene_load("scenes/fulcrum.json", &world) == 0) {
+                    beam_angle = 0.0f;
+                    world.debug.show_velocity = 0;
+                    world.debug.show_contacts = 0;
+                }
+            }
         }
 
         const Uint8 *keys = SDL_GetKeyboardState(NULL);

@@ -15,7 +15,8 @@
       "position": [960, 1000],
       "width": 1800,
       "height": 50,
-      "static": true,
+      "static": false,
+      "restitution": 0.3,
       "color": [100, 100, 100, 255]
     },
     {
