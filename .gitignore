@@ -10,3 +10,5 @@ phys-engine
 .DS_Store
 
 .cache/
+.clangd
+compile_commands.json
