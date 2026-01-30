@@ -5,7 +5,7 @@
 #include "world.h"
 #include "scene.h"
 
-// Window dimensions
+// Window dimensions [im using 1920x1080 cause 1440p 240hz oled makes sim look amazing]
 #define WINDOW_WIDTH 1920
 #define WINDOW_HEIGHT 1080
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     // === Load scene ===
     World world;
-    if (scene_load("scenes/rect_stress_test.json", &world) != 0) {
+    if (scene_load("scenes/gravity_test.json", &world) != 0) {
         fprintf(stderr, "Failed to load scene\n");
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);

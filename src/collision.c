@@ -270,18 +270,33 @@ static void project_corners_onto_axis(const Vec2 corners[4], Vec2 axis, float *m
     }
 }
 
-// Helper: Find the vertex farthest in a given direction (support point)
-static Vec2 get_support_point(const Vec2 corners[4], Vec2 direction) {
+// Helper: Find ALL vertices farthest in a given direction (support points)
+// For edge-edge contacts, there can be 2 vertices with the same projection.
+// Returns the number of support points found (1 or 2) and fills the output array.
+static int get_support_points(const Vec2 corners[4], Vec2 direction, Vec2 out[2]) {
+    const float TOLERANCE = 1e-4f;  // Consider vertices equal if within this distance
+    
     float max_proj = vec2_dot(corners[0], direction);
-    int max_idx = 0;
+    out[0] = corners[0];
+    int count = 1;
+    
     for (int i = 1; i < 4; i++) {
         float proj = vec2_dot(corners[i], direction);
-        if (proj > max_proj) {
+        
+        if (proj > max_proj + TOLERANCE) {
+            // Found a new maximum - reset
             max_proj = proj;
-            max_idx = i;
+            out[0] = corners[i];
+            count = 1;
+        } else if (fabsf(proj - max_proj) <= TOLERANCE) {
+            // This vertex is equally far - it's part of the support edge
+            if (count < 2) {
+                out[count++] = corners[i];
+            }
         }
     }
-    return corners[max_idx];
+    
+    return count;
 }
 
 // Helper: Check if two projection ranges overlap, return overlap amount
@@ -360,13 +375,23 @@ int collision_detect_rects(const Body *a, const Body *b, Collision *out) {
     }
     out->normal = collision_axis;
     
-    // Calculate contact point using support points:
-    // - Support point on A in direction of normal (farthest vertex toward B)
-    // - Support point on B in opposite direction (farthest vertex toward A)
-    // - Average them to get a contact point at the collision interface
-    Vec2 support_a = get_support_point(corners_a, out->normal);
-    Vec2 support_b = get_support_point(corners_b, vec2_negate(out->normal));
-    out->contact = vec2_scale(vec2_add(support_a, support_b), 0.5f);
+    // Calculate contact point using support points (handles edge-edge contacts):
+    // - Find all vertices on A farthest toward B (1 for vertex, 2 for edge)
+    // - Find all vertices on B farthest toward A (1 for vertex, 2 for edge)
+    // - Average all support points to get contact at the collision interface
+    Vec2 supports_a[2], supports_b[2];
+    int count_a = get_support_points(corners_a, out->normal, supports_a);
+    int count_b = get_support_points(corners_b, vec2_negate(out->normal), supports_b);
+    
+    // Average all support vertices to get the contact point
+    Vec2 contact_sum = VEC2_ZERO;
+    for (int i = 0; i < count_a; i++) {
+        contact_sum = vec2_add(contact_sum, supports_a[i]);
+    }
+    for (int i = 0; i < count_b; i++) {
+        contact_sum = vec2_add(contact_sum, supports_b[i]);
+    }
+    out->contact = vec2_scale(contact_sum, 1.0f / (count_a + count_b));
     
     out->body_a = -1;
     out->body_b = -1;
