@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc # gcc for WSL desktop, clang for macbook setup
 CFLAGS = -Wall -Wextra -O2 $(shell sdl2-config --cflags)
 LDFLAGS = $(shell sdl2-config --libs) -lm
 
