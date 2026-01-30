@@ -375,23 +375,67 @@ int collision_detect_rects(const Body *a, const Body *b, Collision *out) {
     }
     out->normal = collision_axis;
     
-    // Calculate contact point using support points (handles edge-edge contacts):
-    // - Find all vertices on A farthest toward B (1 for vertex, 2 for edge)
-    // - Find all vertices on B farthest toward A (1 for vertex, 2 for edge)
-    // - Average all support points to get contact at the collision interface
+    // Calculate contact point using support points with proper clipping:
+    // - Find support vertices on each shape (1 = vertex contact, 2 = edge contact)
+    // - Handle vertex-edge and edge-edge cases properly
     Vec2 supports_a[2], supports_b[2];
     int count_a = get_support_points(corners_a, out->normal, supports_a);
     int count_b = get_support_points(corners_b, vec2_negate(out->normal), supports_b);
     
-    // Average all support vertices to get the contact point
-    Vec2 contact_sum = VEC2_ZERO;
-    for (int i = 0; i < count_a; i++) {
-        contact_sum = vec2_add(contact_sum, supports_a[i]);
+    // Get the tangent (perpendicular to normal) for edge clipping
+    Vec2 tangent = vec2_perp(out->normal);
+    
+    if (count_a == 1 && count_b == 1) {
+        // Vertex-vertex: average both vertices
+        out->contact = vec2_scale(vec2_add(supports_a[0], supports_b[0]), 0.5f);
     }
-    for (int i = 0; i < count_b; i++) {
-        contact_sum = vec2_add(contact_sum, supports_b[i]);
+    else if (count_a == 1) {
+        // Vertex of A hitting edge of B: contact is at A's vertex
+        out->contact = supports_a[0];
     }
-    out->contact = vec2_scale(contact_sum, 1.0f / (count_a + count_b));
+    else if (count_b == 1) {
+        // Vertex of B hitting edge of A: contact is at B's vertex
+        out->contact = supports_b[0];
+    }
+    else {
+        // Edge-edge: clip to find the overlapping segment
+        // Project all 4 points onto the tangent axis
+        float a0_t = vec2_dot(supports_a[0], tangent);
+        float a1_t = vec2_dot(supports_a[1], tangent);
+        float b0_t = vec2_dot(supports_b[0], tangent);
+        float b1_t = vec2_dot(supports_b[1], tangent);
+        
+        // Get ranges on tangent axis
+        float min_a = fminf(a0_t, a1_t);
+        float max_a = fmaxf(a0_t, a1_t);
+        float min_b = fminf(b0_t, b1_t);
+        float max_b = fmaxf(b0_t, b1_t);
+        
+        // Find overlap interval
+        float overlap_min = fmaxf(min_a, min_b);
+        float overlap_max = fminf(max_a, max_b);
+        
+        if (overlap_max >= overlap_min) {
+            // Edges overlap: contact is at the center of the overlap
+            float overlap_center = (overlap_min + overlap_max) * 0.5f;
+            
+            // Project onto the collision axis to get depth position
+            float depth_a = vec2_dot(supports_a[0], out->normal);
+            float depth_b = vec2_dot(supports_b[0], out->normal);
+            float depth_center = (depth_a + depth_b) * 0.5f;
+            
+            // Reconstruct contact point from tangent and normal coordinates
+            out->contact = vec2_add(
+                vec2_scale(tangent, overlap_center),
+                vec2_scale(out->normal, depth_center)
+            );
+        } else {
+            // No overlap (shouldn't happen if collision detected): fallback to average
+            Vec2 center_a = vec2_scale(vec2_add(supports_a[0], supports_a[1]), 0.5f);
+            Vec2 center_b = vec2_scale(vec2_add(supports_b[0], supports_b[1]), 0.5f);
+            out->contact = vec2_scale(vec2_add(center_a, center_b), 0.5f);
+        }
+    }
     
     out->body_a = -1;
     out->body_b = -1;

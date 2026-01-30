@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     // === Load scene ===
     World world;
-    if (scene_load("scenes/gravity_test.json", &world) != 0) {
+    if (scene_load("scenes/rect_stress_test.json", &world) != 0) {
         fprintf(stderr, "Failed to load scene\n");
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
