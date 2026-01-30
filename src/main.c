@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
 
     // === Load scene ===
     World world;
-    if (scene_load("scenes/fulcrum.json", &world) != 0) {
+    if (scene_load("scenes/stacking.json", &world) != 0) {
         fprintf(stderr, "Failed to load scene\n");
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -70,10 +70,11 @@ int main(int argc, char *argv[]) {
     int running = 1;
     SDL_Event event;
     while (running) {
+        // kb control for scene reload
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R) {
-                if (scene_load("scenes/fulcrum.json", &world) == 0) {
+                if (scene_load("scenes/stacking.json", &world) == 0) {
                     beam_angle = 0.0f;
                     world.debug.show_velocity = 0;
                     world.debug.show_contacts = 0;
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // kb control for actuator tilt
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
         if (world.actuator_body_index >= 0) {
             if (keys[SDL_SCANCODE_A]) beam_angle -= BEAM_ANGLE_SPEED;
@@ -102,6 +104,8 @@ int main(int argc, char *argv[]) {
         world_render_debug(&world, renderer);
 
         SDL_RenderPresent(renderer);
+
+        SDL_Delay(1);
     }
 
     SDL_DestroyRenderer(renderer);

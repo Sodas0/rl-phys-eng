@@ -1,6 +1,6 @@
 {
   "world": {
-    "gravity": [0, 98.1],
+    "gravity": [0, 45.0],
     "dt": 0.016667,
     "bounds": {
       "left": 0,
@@ -15,17 +15,18 @@
       "position": [960, 1000],
       "width": 1800,
       "height": 50,
-      "static": false,
-      "restitution": 0.3,
-      "color": [100, 100, 100, 255]
+      "static": true,
+      "restitution": 0.9,
+      "color": [100, 100, 100, 255],
+      "mass": 10000.0
     },
     {
       "type": "rect",
       "position": [960, 920],
       "width": 80,
       "height": 40,
-      "mass": 2.0,
-      "restitution": 0.3,
+      "mass": 200.0,
+      "restitution": 1.0,
       "color": [200, 100, 100, 255]
     },
     {
@@ -34,7 +35,7 @@
       "width": 80,
       "height": 40,
       "mass": 2.0,
-      "restitution": 0.3,
+      "restitution": 0.8,
       "color": [100, 200, 100, 255]
     },
     {
@@ -43,7 +44,7 @@
       "width": 80,
       "height": 40,
       "mass": 2.0,
-      "restitution": 0.3,
+      "restitution": 0.8,
       "color": [100, 100, 200, 255]
     },
     {
@@ -52,7 +53,7 @@
       "width": 80,
       "height": 40,
       "mass": 2.0,
-      "restitution": 0.3,
+      "restitution": 0.8,
       "color": [200, 200, 100, 255]
     },
     {
@@ -61,7 +62,7 @@
       "width": 80,
       "height": 40,
       "mass": 2.0,
-      "restitution": 0.3,
+      "restitution": 0.8,
       "color": [200, 100, 200, 255]
     },
     {
@@ -69,7 +70,7 @@
       "position": [960, 600],
       "radius": 30,
       "mass": 1.5,
-      "restitution": 0.4,
+      "restitution": 0.8,
       "color": [255, 150, 150, 255]
     }
   ]
