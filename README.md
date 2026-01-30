@@ -6,9 +6,11 @@ My goal with this project is to use this as a very simple physics engine for ele
 
 **Note:** The RL interface is a work in progress. 
 
-## Demo
+## Demos
 
-https://github.com/user-attachments/assets/2fb8b3da-6529-48a6-90d7-17bd01d83c48
+https://github.com/user-attachments/assets/f86cbff9-2a39-44fe-be45-3632ccf1025a
+
+https://github.com/user-attachments/assets/de39ddf9-bbd8-478f-8692-32b7ad2940a2
 
 ## Features
 
