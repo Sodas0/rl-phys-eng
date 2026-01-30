@@ -8,3 +8,5 @@ phys-engine
 
 # OS
 .DS_Store
+
+.cache/
