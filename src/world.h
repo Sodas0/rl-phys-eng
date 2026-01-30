@@ -36,6 +36,9 @@ typedef struct {
     
     // Debug visualization settings
     DebugFlags debug;
+
+    // Deterministic RNG state (xorshift32)
+    uint32_t rng_state;
 } World;
 
 // Initialize world with gravity vector and fixed timestep
@@ -64,9 +67,20 @@ int world_spawn_grid(World *w, int rows, int cols, Vec2 origin, float spacing,
                      float radius, float mass, float restitution);
 
 // Spawn bodies at random positions within bounds. Returns number added.
-// Uses simple pseudo-random; call srand() beforehand for variety.
+// Uses deterministic RNG from world->rng_state.
 int world_spawn_random(World *w, int count, float x_min, float y_min,
                        float x_max, float y_max, float min_radius, float max_radius,
                        float min_restitution, float max_restitution);
+
+// --- Deterministic RNG ---
+
+// Seed the world's RNG for deterministic replay
+void world_seed(World *w, uint32_t seed);
+
+// Generate deterministic random uint32_t using xorshift32
+uint32_t world_rand(World *w);
+
+// Generate deterministic random float in [0, 1)
+float world_randf(World *w);
 
 #endif // WORLD_H

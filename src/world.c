@@ -1,7 +1,8 @@
 #include "world.h"
 #include "render.h"
 #include "collision.h"
-#include <stdlib.h>  // For rand()
+#include <stdlib.h>
+#include <stdint.h>
 
 void world_init(World *w, Vec2 gravity, float dt) {
     w->body_count = 0;
@@ -15,6 +16,9 @@ void world_init(World *w, Vec2 gravity, float dt) {
     w->debug.show_velocity = 0;
     w->debug.show_contacts = 0;
     w->debug.show_normals = 0;
+
+    // Initialize RNG with a default seed
+    world_seed(w, 1);
 }
 
 void world_set_bounds(World *w, float left, float top, float right, float bottom) {
@@ -347,6 +351,28 @@ void world_render_debug(World *w, SDL_Renderer *r) {
     }
 }
 
+// --- Deterministic RNG ---
+
+void world_seed(World *w, uint32_t seed) {
+    // Ensure seed is never 0 (xorshift32 breaks on 0)
+    w->rng_state = (seed == 0) ? 1 : seed;
+}
+
+uint32_t world_rand(World *w) {
+    // xorshift32 algorithm - simple, fast, deterministic
+    uint32_t x = w->rng_state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    w->rng_state = x;
+    return x;
+}
+
+float world_randf(World *w) {
+    // Generate [0, 1) by dividing by max uint32 value
+    return (float)world_rand(w) / (float)UINT32_MAX;
+}
+
 // --- Spawn Helpers ---
 
 int world_spawn_grid(World *w, int rows, int cols, Vec2 origin, float spacing,
@@ -384,21 +410,21 @@ int world_spawn_random(World *w, int count, float x_min, float y_min,
     int added = 0;
     
     for (int i = 0; i < count; i++) {
-        // Random position within bounds
-        float x = x_min + ((float)rand() / RAND_MAX) * (x_max - x_min);
-        float y = y_min + ((float)rand() / RAND_MAX) * (y_max - y_min);
+        // Random position within bounds (deterministic)
+        float x = x_min + world_randf(w) * (x_max - x_min);
+        float y = y_min + world_randf(w) * (y_max - y_min);
         
-        // Random radius
-        float radius = min_radius + ((float)rand() / RAND_MAX) * (max_radius - min_radius);
+        // Random radius (deterministic)
+        float radius = min_radius + world_randf(w) * (max_radius - min_radius);
         
-        // Random restitution (bounciness)
-        float restitution = min_restitution + ((float)rand() / RAND_MAX) * (max_restitution - min_restitution);
+        // Random restitution (bounciness, deterministic)
+        float restitution = min_restitution + world_randf(w) * (max_restitution - min_restitution);
         
-        // Random color
+        // Random color (deterministic)
         SDL_Color color = {
-            (Uint8)(rand() % 156 + 100),
-            (Uint8)(rand() % 156 + 100),
-            (Uint8)(rand() % 156 + 100),
+            (Uint8)(world_rand(w) % 156 + 100),
+            (Uint8)(world_rand(w) % 156 + 100),
+            (Uint8)(world_rand(w) % 156 + 100),
             255
         };
         
