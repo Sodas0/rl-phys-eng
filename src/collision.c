@@ -5,10 +5,10 @@
 // Pushes overlapping bodies apart to prevent sinking
 static void collision_positional_correction(Body *a, Body *b, Collision *col) {
     const float PERCENT = 0.2f;   // 20% of penetration corrected per iteration
-    const float SLOP = 0.001f;     // Allow small overlap to prevent jitter
+    const float SLOP = 0.001f;     // small overlap to prevent jitter
     
     float inv_mass_sum = a->inv_mass + b->inv_mass;
-    if (inv_mass_sum == 0.0f) return;  // Both static
+    if (inv_mass_sum == 0.0f) return;  // both static
     
     float correction = fmaxf(col->penetration - SLOP, 0.0f) * PERCENT / inv_mass_sum;
     Vec2 correction_vec = vec2_scale(col->normal, correction);
@@ -18,10 +18,9 @@ static void collision_positional_correction(Body *a, Body *b, Collision *col) {
 }
 
 
-//TODO: add collision resolution for other shapes as well.
 // --- Impulse-Based Collision Resolution with Angular Effects ---
 void collision_resolve(Body *a, Body *b, Collision *col) {
-    // Early exit: both bodies are static
+    // Early exit if both bodies are static
     float inv_mass_sum = a->inv_mass + b->inv_mass;
     if (inv_mass_sum == 0.0f) return;
     
@@ -42,9 +41,12 @@ void collision_resolve(Body *a, Body *b, Collision *col) {
     // Relative velocity along collision normal
     float vel_along_normal = vec2_dot(rel_vel, col->normal);
     
-    // Early exit: bodies are separating (moving apart)
-    if (vel_along_normal > 0.0f) {
-        // Still apply positional correction if overlapping
+    // contact threshold to prevent jitter from micro-corrections (need to tweak a bit)
+    const float REST_VEL_EPS = 5.0f;  // [pixels/sec] Used to avoid jitter -- i want to tweak a bit.
+    
+    // Early exit if bodies are separating or at rest
+    if (vel_along_normal > -REST_VEL_EPS) {
+        // Treat as resting contact - only apply positional correction
         collision_positional_correction(a, b, col);
         return;
     }
@@ -234,4 +236,133 @@ int collision_detect_circle_rect(const Body *circle, const Body *rect, Collision
     return 1;  // Collision detected
 }
 
-//TODO: add collision detection for rect-rect (should use OBB-OBB with SAT or similar)
+// Helper: Get the 4 corners of a rotated rectangle in world space
+static void get_rect_corners(const Body *rect, Vec2 corners[4]) {
+    float half_w = rect->shape.rect.width * 0.5f;
+    float half_h = rect->shape.rect.height * 0.5f;
+    float cos_angle = cosf(rect->angle);
+    float sin_angle = sinf(rect->angle);
+    
+    // Local corners (top-left, top-right, bottom-right, bottom-left)
+    Vec2 local[4] = {
+        vec2(-half_w, -half_h),
+        vec2( half_w, -half_h),
+        vec2( half_w,  half_h),
+        vec2(-half_w,  half_h)
+    };
+    
+    // Transform to world space
+    for (int i = 0; i < 4; i++) {
+        float wx = local[i].x * cos_angle - local[i].y * sin_angle;
+        float wy = local[i].x * sin_angle + local[i].y * cos_angle;
+        corners[i] = vec2_add(vec2(wx, wy), rect->position);
+    }
+}
+
+// Helper: Project a polygon (defined by corners) onto an axis and return [min, max]
+static void project_corners_onto_axis(const Vec2 corners[4], Vec2 axis, float *min, float *max) {
+    *min = *max = vec2_dot(corners[0], axis);
+    
+    for (int i = 1; i < 4; i++) {
+        float projection = vec2_dot(corners[i], axis);
+        if (projection < *min) *min = projection;
+        if (projection > *max) *max = projection;
+    }
+}
+
+// Helper: Check if two projection ranges overlap, return overlap amount
+// Returns negative if separated, positive if overlapping
+static float get_overlap(float min_a, float max_a, float min_b, float max_b) {
+    // No overlap if ranges are separated
+    if (max_a < min_b || max_b < min_a) {
+        return -1.0f;  // Separated
+    }
+    
+    // Calculate overlap (always positive when overlapping)
+    float overlap1 = max_a - min_b;  // A's max overlaps B's min
+    float overlap2 = max_b - min_a;  // B's max overlaps A's min
+    
+    return (overlap1 < overlap2) ? overlap1 : overlap2;
+}
+
+// Rectangle-Rectangle collision using Separating Axis Theorem (SAT)
+// Tests 4 axes: 2 from each rectangle's edges
+// Returns 1 if colliding, fills collision data in `out`
+int collision_detect_rects(const Body *a, const Body *b, Collision *out) {
+    // Get corners in world space
+    Vec2 corners_a[4], corners_b[4];
+    get_rect_corners(a, corners_a);
+    get_rect_corners(b, corners_b);
+    
+    // Get the two axis directions for each rectangle
+    // Axis 0: edge direction (right vector)
+    // Axis 1: perpendicular to edge (up vector)
+    Vec2 axes[4];
+    axes[0] = vec2(cosf(a->angle), sinf(a->angle));      // A's right axis
+    axes[1] = vec2(-sinf(a->angle), cosf(a->angle));     // A's up axis
+    axes[2] = vec2(cosf(b->angle), sinf(b->angle));      // B's right axis
+    axes[3] = vec2(-sinf(b->angle), cosf(b->angle));     // B's up axis
+    
+    // Track minimum overlap axis (for collision resolution)
+    float min_overlap = INFINITY;
+    Vec2 collision_axis = VEC2_ZERO;
+    int best_axis_idx = -1;
+    
+    // Test all 4 axes for separation
+    for (int i = 0; i < 4; i++) {
+        Vec2 axis = axes[i];
+        
+        // Normalize axis (should already be normalized, but ensure it)
+        float len = vec2_len(axis);
+        if (len < 1e-8f) continue;
+        axis = vec2_scale(axis, 1.0f / len);
+        
+        // Project both rectangles onto this axis
+        float min_a, max_a, min_b, max_b;
+        project_corners_onto_axis(corners_a, axis, &min_a, &max_a);
+        project_corners_onto_axis(corners_b, axis, &min_b, &max_b);
+        
+        // Check for separation
+        float overlap = get_overlap(min_a, max_a, min_b, max_b);
+        
+        if (overlap < 0.0f) {
+            // Found separating axis - no collision
+            return 0;
+        }
+        
+        // Track axis with minimum overlap (that's our collision axis)
+        if (overlap < min_overlap) {
+            min_overlap = overlap;
+            collision_axis = axis;
+            best_axis_idx = i;
+        }
+    }
+    
+    // No separating axis found - rectangles are colliding
+    out->penetration = min_overlap;
+    
+    // Ensure normal points from A to B
+    Vec2 ab = vec2_sub(b->position, a->position);
+    if (vec2_dot(collision_axis, ab) < 0.0f) {
+        collision_axis = vec2_negate(collision_axis);
+    }
+    out->normal = collision_axis;
+    
+    // Calculate contact point (approximation: use midpoint between centers projected onto collision surface)
+    // For more accurate contact points, we'd need to find the actual overlapping region
+    // Simple approximation: contact is at the collision surface between the two centers
+    Vec2 contact_from_a = vec2_scale(out->normal, 
+        (best_axis_idx < 2 ? a->shape.rect.width : a->shape.rect.height) * 0.5f);
+    out->contact = vec2_add(a->position, contact_from_a);
+    
+    // Alternative: average the contact point from both bodies
+    Vec2 contact_from_b = vec2_scale(vec2_negate(out->normal),
+        (best_axis_idx >= 2 ? b->shape.rect.width : b->shape.rect.height) * 0.5f);
+    Vec2 contact_b = vec2_add(b->position, contact_from_b);
+    out->contact = vec2_scale(vec2_add(out->contact, contact_b), 0.5f);
+    
+    out->body_a = -1;
+    out->body_b = -1;
+    
+    return 1;  // Collision detected
+}

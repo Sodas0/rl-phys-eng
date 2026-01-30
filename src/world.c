@@ -73,26 +73,43 @@ static void integrate_bodies(World *w) {
 
 static void resolve_circle_vs_bounds(Body *b, float left, float top, float right, float bottom) {
     float radius = b->shape.circle.radius;
+    const float REST_VEL_EPS = 5.0f;  // pixels/sec - treat as resting below this
     
     // Left wall
     if (b->position.x - radius < left) {
         b->position.x = left + radius;
-        b->velocity.x = -b->velocity.x * b->restitution;
+        if (fabsf(b->velocity.x) > REST_VEL_EPS) {
+            b->velocity.x = -b->velocity.x * b->restitution;
+        } else {
+            b->velocity.x = 0.0f;  // Kill micro-velocity to prevent jitter
+        }
     }
     // Right wall
     if (b->position.x + radius > right) {
         b->position.x = right - radius;
-        b->velocity.x = -b->velocity.x * b->restitution;
+        if (fabsf(b->velocity.x) > REST_VEL_EPS) {
+            b->velocity.x = -b->velocity.x * b->restitution;
+        } else {
+            b->velocity.x = 0.0f;
+        }
     }
     // Ceiling (top)
     if (b->position.y - radius < top) {
         b->position.y = top + radius;
-        b->velocity.y = -b->velocity.y * b->restitution;
+        if (fabsf(b->velocity.y) > REST_VEL_EPS) {
+            b->velocity.y = -b->velocity.y * b->restitution;
+        } else {
+            b->velocity.y = 0.0f;
+        }
     }
     // Floor (bottom)
     if (b->position.y + radius > bottom) {
         b->position.y = bottom - radius;
-        b->velocity.y = -b->velocity.y * b->restitution;
+        if (fabsf(b->velocity.y) > REST_VEL_EPS) {
+            b->velocity.y = -b->velocity.y * b->restitution;
+        } else {
+            b->velocity.y = 0.0f;
+        }
     }
 }
 
@@ -193,8 +210,11 @@ static void resolve_rect_vs_bounds(Body *b, float left, float top, float right, 
         // Velocity component along the collision normal
         float vel_along_normal = vec2_dot(point_velocity, collision_normal);
         
-        // Only resolve if moving into the boundary
-        if (vel_along_normal < 0.0f) {
+        // Resting contact threshold to prevent jitter
+        const float REST_VEL_EPS = 5.0f;  // pixels/sec
+        
+        // Only resolve if moving into the boundary (not resting or separating)
+        if (vel_along_normal < -REST_VEL_EPS) {
             // Calculate impulse (treating boundary as infinite mass)
             // For boundary collision, the effective mass calculation simplifies
             float r_cross_n = vec2_cross(r, collision_normal);
@@ -260,7 +280,10 @@ static int detect_all_collisions(World *w, Collision *collisions, int max_collis
                     col.normal = vec2_negate(col.normal);
                 }
             }
-            // Rect-rect: not implemented yet
+            else if (a->shape.type == SHAPE_RECT && b->shape.type == SHAPE_RECT) {
+                // Rect-rect collision using SAT
+                collided = collision_detect_rects(a, b, &col);
+            }
             
             if (collided) {
                 col.body_a = i;
