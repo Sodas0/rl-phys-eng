@@ -14,12 +14,14 @@ https://github.com/user-attachments/assets/de39ddf9-bbd8-478f-8692-32b7ad2940a2
 
 ## Features
 
-- Circle-based rigid body simulation
-- Collision detection and impulse-based response
+- Circle and rectangle rigid body simulation with rotation
+- Collision detection and impulse-based response (SAT for rectangles)
 - Configurable gravity and world boundaries
 - Adjustable body properties (mass, restitution/bounciness)
-- Debug visualization for velocity vectors
-- Bulk spawning utilities for stress testing
+- Debug visualization for velocity vectors and contact points
+- JSON scene loading system
+- Deterministic RNG for reproducible simulations
+- Uint system where 100 pixels = 1 meter
 
 ## Requirements
 
@@ -36,15 +38,4 @@ make
 
 ```bash
 make run
-```
-
-## Usage
-
-Bodies can be created and customized in `main.c`:
-
-```c
-Body b = body_default(vec2(400, 100), 60.0f);  // position, radius
-b.color = (SDL_Color){255, 100, 100, 255};
-b.restitution = 1.0f;  // bounciness [0-1]
-world_add_body(&world, b);
 ```
