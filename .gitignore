@@ -1,6 +1,9 @@
 # Build artifacts
 build/
+
+#binaries
 phys-engine
+phys-engine-sim
 
 # IDE
 .cursor/
