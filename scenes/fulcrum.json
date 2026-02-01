@@ -21,7 +21,7 @@
     },
     {
       "type": "circle",
-      "position": [935, 540],
+      "position": [960, 500],
       "radius": 25,
       "mass": 1.0,
       "restitution": 0.4,
