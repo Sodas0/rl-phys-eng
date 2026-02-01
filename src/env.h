@@ -19,7 +19,11 @@ typedef struct Env Env;
 
 // Compile-time check that Env and Simulator agree on observation dimension
 // This prevents silent memory corruption
+#if defined(__cplusplus)
+static_assert(OBS_DIM == SIM_OBS_DIM, "Env/Simulator observation dimension mismatch");
+#else
 _Static_assert(OBS_DIM == SIM_OBS_DIM, "Env/Simulator observation dimension mismatch");
+#endif
 
 // Action: torque in [-1, 1]
 typedef struct {

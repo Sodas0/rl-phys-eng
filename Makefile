@@ -1,14 +1,18 @@
-CC = clang # gcc for WSL desktop, clang for macbook setup
-CXX = clang++ # C++ compiler for wrapper
-CFLAGS = -Wall -Wextra -O2 $(shell sdl2-config --cflags)
-CXXFLAGS = -Wall -Wextra -O2 -std=c++11 $(shell sdl2-config --cflags)
+CC = gcc # gcc for WSL desktop, clang for macbook setup
+CXX = g++ # C++ compiler for wrapper
+CFLAGS = -Wall -Wextra -O2 -fPIC $(shell sdl2-config --cflags)
+CXXFLAGS = -Wall -Wextra -O2 -std=c++11 -fPIC $(shell sdl2-config --cflags)
 LDFLAGS = $(shell sdl2-config --libs) -lm
 
 # Python bindings configuration
 PYTHON_INCLUDES = $(shell python3 -m pybind11 --includes)
 PYTHON_EXT_SUFFIX = $(shell python3-config --extension-suffix)
-# On macOS, use -undefined dynamic_lookup instead of linking Python directly
+# On macOS, use -undefined dynamic_lookup; on Linux no extra flag needed
+ifeq ($(shell uname -s),Darwin)
 PYTHON_LDFLAGS = -undefined dynamic_lookup
+else
+PYTHON_LDFLAGS =
+endif
 PYBIND_CXXFLAGS = $(CXXFLAGS) $(PYTHON_INCLUDES) -fPIC
 PYBIND_MODULE = sim_bindings$(PYTHON_EXT_SUFFIX)
 

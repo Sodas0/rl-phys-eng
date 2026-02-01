@@ -94,7 +94,7 @@ def smoke_test():
     print(f"Value estimate:{value.item(): .4f}")
 
     # --- Step the environment ---
-    act = float(np.clip(action.cpu().numpy()[0], -1.0, 1.0))
+    act = float(np.clip(action.cpu().numpy().squeeze(), -1.0, 1.0).item())
     next_obs, reward, terminated, truncated = env.step(act)
 
     print("Step OK")
@@ -111,7 +111,7 @@ def smoke_test():
         with torch.no_grad():
             action, _, _ = policy.act(obs_t)
 
-        act = float(np.clip(action.cpu().numpy()[0], -1.0, 1.0))
+        act = float(np.clip(action.cpu().numpy().squeeze(), -1.0, 1.0).item())
         obs, reward, terminated, truncated = env.step(act)
         total_reward += reward
 
