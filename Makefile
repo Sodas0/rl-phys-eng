@@ -4,6 +4,14 @@ CFLAGS = -Wall -Wextra -O2 $(shell sdl2-config --cflags)
 CXXFLAGS = -Wall -Wextra -O2 -std=c++11 $(shell sdl2-config --cflags)
 LDFLAGS = $(shell sdl2-config --libs) -lm
 
+# Python bindings configuration
+PYTHON_INCLUDES = $(shell python3 -m pybind11 --includes)
+PYTHON_EXT_SUFFIX = $(shell python3-config --extension-suffix)
+# On macOS, use -undefined dynamic_lookup instead of linking Python directly
+PYTHON_LDFLAGS = -undefined dynamic_lookup
+PYBIND_CXXFLAGS = $(CXXFLAGS) $(PYTHON_INCLUDES) -fPIC
+PYBIND_MODULE = sim_bindings$(PYTHON_EXT_SUFFIX)
+
 SRC_DIR = src
 BUILD_DIR = build
 TARGET = engine
@@ -51,7 +59,22 @@ run-sim: $(TARGET_SIM)
 test-wrapper: $(TARGET_WRAPPER)
 	./$(TARGET_WRAPPER)
 
-clean:
-	rm -rf $(BUILD_DIR) $(TARGET) $(TARGET_SIM) $(TARGET_WRAPPER)
+# Python bindings target
+$(PYBIND_MODULE): $(CORE_OBJ) $(BUILD_DIR)/env_wrapper.o $(BUILD_DIR)/bindings.o
+	$(CXX) -shared $^ -o $@ $(LDFLAGS) $(PYTHON_LDFLAGS)
 
-.PHONY: all run run-sim test-wrapper clean
+# Special compilation rule for bindings.cpp with pybind11 flags
+$(BUILD_DIR)/bindings.o: $(SRC_DIR)/bindings.cpp | $(BUILD_DIR)
+	$(CXX) $(PYBIND_CXXFLAGS) -c $< -o $@
+
+# Build Python bindings
+bindings: $(PYBIND_MODULE)
+
+# Test Python bindings
+test-bindings: $(PYBIND_MODULE)
+	python3 -c "import sim_bindings; print('✓ sim_bindings imported successfully')"
+
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET) $(TARGET_SIM) $(TARGET_WRAPPER) sim_bindings*.so
+
+.PHONY: all run run-sim test-wrapper bindings test-bindings clean
