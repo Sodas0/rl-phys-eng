@@ -140,8 +140,9 @@ void sim_reset(Simulator* sim) {
     // Apply initial-state randomization for learning
     // This forces feedback control without making episodes unrecoverable
     
-    printf("[sim_reset] seed=%u, rng_state=%u, actuator_idx=%d\n", 
-           sim->seed, sim->world.rng_state, sim->world.actuator_body_index);
+    // Debug output disabled
+    // printf("[sim_reset] seed=%u, rng_state=%u, actuator_idx=%d\n", 
+    //        sim->seed, sim->world.rng_state, sim->world.actuator_body_index);
     
     // Get beam (actuator) body
     Body* beam = world_get_body(&sim->world, sim->world.actuator_body_index);
@@ -160,8 +161,9 @@ void sim_reset(Simulator* sim) {
     // Generate random value in [-1, 1]
     float random_angle_norm = world_randf(&sim->world) * 2.0f - 1.0f;
     float initial_beam_angle = random_angle_norm * RANDOMIZE_BEAM_ANGLE_RAD;
-    printf("[sim_reset] random_angle_norm=%.3f, beam_angle=%.3f\n", 
-           random_angle_norm, initial_beam_angle);
+    // Debug output disabled
+    // printf("[sim_reset] random_angle_norm=%.3f, beam_angle=%.3f\n", 
+    //        random_angle_norm, initial_beam_angle);
     
     // Apply randomized beam angle to actuator
     sim->actuator.angle = initial_beam_angle;
@@ -173,8 +175,9 @@ void sim_reset(Simulator* sim) {
     // Generate random X offset: ±20% of beam half-length
     float random_pos_norm = world_randf(&sim->world) * 2.0f - 1.0f;
     float random_x_offset = random_pos_norm * RANDOMIZE_BALL_POSITION_RATIO * beam_half_length;
-    printf("[sim_reset] random_pos_norm=%.3f, random_x_offset=%.1f px\n", 
-           random_pos_norm, random_x_offset);
+    // Debug output disabled
+    // printf("[sim_reset] random_pos_norm=%.3f, random_x_offset=%.1f px\n", 
+    //        random_pos_norm, random_x_offset);
     
     // Add random X offset to the JSON position (Y stays as-is from JSON)
     ball->position.x += random_x_offset;
@@ -303,6 +306,9 @@ void sim_render(Simulator* sim) {
     if (!sim || sim->headless || !sim->renderer) {
         return;
     }
+    
+    // Pump events to keep window responsive (required on macOS)
+    SDL_PumpEvents();
     
     // Clear screen
     SDL_SetRenderDrawColor(sim->renderer, 30, 30, 30, 255);

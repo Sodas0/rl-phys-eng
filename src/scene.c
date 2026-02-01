@@ -279,6 +279,6 @@ int scene_load(const char *filepath, World *world) {
     }
 
     cJSON_Delete(root);
-    printf("Scene loaded: %s\n", filepath);
+    // printf("Scene loaded: %s\n", filepath);  // Debug output disabled
     return 0;
 }
