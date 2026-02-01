@@ -4,8 +4,6 @@
 #include "simulator.h"
 #include "env.h"
 
-#define WINDOW_WIDTH 1920
-#define WINDOW_HEIGHT 1080
 #define SIM_DT (1.0f / 240.0f)  // 240 Hz fixed physics timestep
 
 int main(int argc, char *argv[]) {
@@ -19,28 +17,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // SDL window and renderer (NULL in headless mode)
-    SDL_Window *window = NULL;
-    SDL_Renderer *renderer = NULL;
-
-    // Only initialize SDL and create window/renderer if not headless
-    if (!headless) {
-        SDL_Init(SDL_INIT_VIDEO);
-        window = SDL_CreateWindow("2D phys-eng - Env API Test",
-            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-            WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    }
-
-    // Create simulator
-    Simulator* sim = sim_create("scenes/fulcrum.json", 12345, SIM_DT);
+    // Create simulator (simulator now owns SDL window/renderer)
+    Simulator* sim = sim_create("scenes/fulcrum.json", 12345, SIM_DT, headless);
     if (!sim) {
         fprintf(stderr, "Failed to create simulator\n");
-        if (!headless) {
-            SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
-            SDL_Quit();
-        }
         return 1;
     }
 
@@ -56,16 +36,10 @@ int main(int argc, char *argv[]) {
     if (!env) {
         fprintf(stderr, "Failed to create environment\n");
         sim_destroy(sim);
-        if (!headless) {
-            SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
-            SDL_Quit();
-        }
         return 1;
     }
     
-    // Enable rendering only if not headless
-    env_set_render_enabled(env, !headless);
+    // Note: Rendering is automatically enabled based on simulator's headless flag
     
     // Reset environment to get initial observation
     StepResult result = env_reset(env);
@@ -179,23 +153,15 @@ int main(int argc, char *argv[]) {
         }
 
         // Render via environment API (no-op in headless mode)
+        // Simulator owns all SDL resources
         if (!headless) {
-            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-            SDL_RenderClear(renderer);
-            env_render(env, renderer);
-            SDL_RenderPresent(renderer);
+            env_render(env);
         }
     }
 
     // Cleanup via environment API (which destroys the simulator)
+    // Simulator destruction handles SDL cleanup
     env_destroy(env);
-    
-    // Cleanup SDL resources (only if not headless)
-    if (!headless) {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
     
     printf("Simulation complete. Total steps: %lld\n", step_count);
     return 0;

@@ -1,8 +1,13 @@
 #include "simulator.h"
 #include "scene.h"
+#include "render.h"
+#include <SDL.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1080
 
 // Actuator dynamics parameters
 // NOTE FOR MY OWN INTUITION:
@@ -40,7 +45,7 @@ static void apply_actuator_pose(World *world, float angle) {
     beam->angular_velocity = 0.0f;
 }
 
-Simulator* sim_create(const char* scene_path, uint32_t seed, float dt) {
+Simulator* sim_create(const char* scene_path, uint32_t seed, float dt, int headless) {
     Simulator* sim = (Simulator*)malloc(sizeof(Simulator));
     if (!sim) return NULL;
     
@@ -48,6 +53,37 @@ Simulator* sim_create(const char* scene_path, uint32_t seed, float dt) {
     sim->scene_path[sizeof(sim->scene_path) - 1] = '\0';
     sim->seed = seed;
     sim->dt = dt;
+    sim->headless = headless;
+    
+    // Initialize rendering backend (NULL in headless mode)
+    sim->window = NULL;
+    sim->renderer = NULL;
+    
+    // Create SDL window/renderer if not headless
+    if (!headless) {
+        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+            free(sim);
+            return NULL;
+        }
+        
+        sim->window = SDL_CreateWindow("Physics Simulator",
+            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+            WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+        
+        if (!sim->window) {
+            SDL_Quit();
+            free(sim);
+            return NULL;
+        }
+        
+        sim->renderer = SDL_CreateRenderer(sim->window, -1, SDL_RENDERER_ACCELERATED);
+        if (!sim->renderer) {
+            SDL_DestroyWindow(sim->window);
+            SDL_Quit();
+            free(sim);
+            return NULL;
+        }
+    }
     
     // Initialize actuator state
     sim->actuator.angle = 0.0f;
@@ -55,6 +91,11 @@ Simulator* sim_create(const char* scene_path, uint32_t seed, float dt) {
     
     // Load initial scene
     if (scene_load(scene_path, &sim->world) != 0) {
+        if (!headless) {
+            SDL_DestroyRenderer(sim->renderer);
+            SDL_DestroyWindow(sim->window);
+            SDL_Quit();
+        }
         free(sim);
         return NULL;
     }
@@ -70,6 +111,16 @@ Simulator* sim_create(const char* scene_path, uint32_t seed, float dt) {
 
 void sim_destroy(Simulator* sim) {
     if (sim) {
+        // Cleanup SDL resources if not headless
+        if (!sim->headless) {
+            if (sim->renderer) {
+                SDL_DestroyRenderer(sim->renderer);
+            }
+            if (sim->window) {
+                SDL_DestroyWindow(sim->window);
+            }
+            SDL_Quit();
+        }
         free(sim);
     }
 }
@@ -244,4 +295,22 @@ void sim_get_observation(const Simulator* sim, float* obs_out, int obs_dim) {
     obs_out[1] = beam_angular_velocity;   // beam angular velocity θ̇ (rad/s)
     obs_out[2] = x_along_beam;            // ball position along beam (pixels)
     obs_out[3] = vel_along_beam;          // ball velocity along beam (pixels/s)
+}
+
+// Render the simulator state
+void sim_render(Simulator* sim) {
+    // No-op if sim is NULL, headless, or renderer is NULL
+    if (!sim || sim->headless || !sim->renderer) {
+        return;
+    }
+    
+    // Clear screen
+    SDL_SetRenderDrawColor(sim->renderer, 30, 30, 30, 255);
+    SDL_RenderClear(sim->renderer);
+    
+    // Render world
+    world_render_debug(&sim->world, sim->renderer);
+    
+    // Present
+    SDL_RenderPresent(sim->renderer);
 }

@@ -4,6 +4,14 @@
 #include "world.h"
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Forward declaration to avoid SDL dependency in header
+typedef struct SDL_Window SDL_Window;
+typedef struct SDL_Renderer SDL_Renderer;
+
 // Observation dimension: simulator is the single authority on state semantics
 #define SIM_OBS_DIM 4
 
@@ -20,10 +28,16 @@ typedef struct {
     uint32_t seed;
     float dt;         // Fixed timestep (simulator-owned)
     Actuator actuator;  // Actuator state with dynamics
+    
+    // Rendering backend (owned by simulator)
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    int headless;     // Flag: 1 = no rendering, 0 = rendering enabled
 } Simulator;
 
 // Core API
-Simulator* sim_create(const char* scene_path, uint32_t seed, float dt);
+// headless: 1 = no rendering (no SDL), 0 = create window/renderer for visualization
+Simulator* sim_create(const char* scene_path, uint32_t seed, float dt, int headless);
 void sim_destroy(Simulator* sim);
 
 // Reset simulator to randomized initial state for learning
@@ -53,5 +67,14 @@ World* sim_get_world(Simulator* sim);
 //
 // obs_dim: size of obs_out buffer (must be >= SIM_OBS_DIM)
 void sim_get_observation(const Simulator* sim, float* obs_out, int obs_dim);
+
+// Render the simulator state to the screen
+// No-op if sim == NULL, headless == 1, or renderer is NULL
+// Does not affect physics, observations, rewards, or termination
+void sim_render(Simulator* sim);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -3,7 +3,10 @@
 
 #include "simulator.h"
 #include <stdint.h>
-#include <SDL.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Opaque environment handle
 typedef struct Env Env;
@@ -61,17 +64,20 @@ StepResult env_reset(Env* env);
 StepResult env_step(Env* env, Action action);
 
 // Render the environment for debugging purposes (optional, disabled by default)
-// This is a thin passthrough to the underlying world rendering.
+// This is a thin passthrough to the underlying simulator rendering.
 // Rendering does NOT affect physics, observations, rewards, or determinism.
 // env: environment to render
-// renderer: SDL renderer (can be NULL if rendering is disabled)
-// If renderer is NULL or rendering is disabled, this is a no-op.
-void env_render(Env* env, SDL_Renderer* renderer);
+// If rendering is disabled or simulator is headless, this is a no-op.
+void env_render(Env* env);
 
 // Enable or disable rendering for this environment
 // By default, rendering is disabled for headless operation.
 // env: environment to configure
 // enabled: 1 to enable rendering, 0 to disable
 void env_set_render_enabled(Env* env, int enabled);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ENV_H

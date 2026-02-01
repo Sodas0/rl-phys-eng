@@ -25,8 +25,9 @@ Env* env_create(Simulator* sim) {
     // Take ownership of the simulator
     env->sim = sim;
     
-    // Rendering disabled by default (headless mode)
-    env->render_enabled = 0;
+    // Rendering enabled by default if simulator is not headless
+    // This allows env_render() to work without explicit configuration
+    env->render_enabled = !sim->headless;
     
     // Initialize episode step counter
     env->step_count = 0;
@@ -44,17 +45,14 @@ void env_destroy(Env* env) {
     }
 }
 
-void env_render(Env* env, SDL_Renderer* renderer) {
-    // No-op if env is NULL, renderer is NULL, or rendering is disabled
-    if (!env || !renderer || !env->render_enabled) {
+void env_render(Env* env) {
+    // No-op if env is NULL or rendering is disabled
+    if (!env || !env->render_enabled) {
         return;
     }
     
-    // Thin passthrough to world rendering
-    World* world = sim_get_world(env->sim);
-    if (world) {
-        world_render_debug(world, renderer);
-    }
+    // Thin passthrough to simulator rendering
+    sim_render(env->sim);
 }
 
 void env_set_render_enabled(Env* env, int enabled) {
