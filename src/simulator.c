@@ -11,6 +11,11 @@
 #define ACTUATOR_TAU 0.1f          // seconds (time constant for first-order lag)
 #define BEAM_ANGLE_MAX 0.5f        // radians (saturation limit)
 
+// Initial-state randomization parameters for learning
+// These ranges force immediate corrective control while keeping all states recoverable
+#define RANDOMIZE_BALL_POSITION_RATIO 0.2f   // ±20% of beam half-length
+#define RANDOMIZE_BEAM_ANGLE_RAD 0.349f      // ±20 degrees (≈ ±0.349 radians)
+
 // Helper: apply actuator pose (matches main.c logic exactly)
 static void apply_actuator_pose(World *world, float angle) {
     if (world->actuator_body_index < 0) return;
@@ -72,14 +77,60 @@ void sim_destroy(Simulator* sim) {
 void sim_reset(Simulator* sim) {
     if (!sim) return;
     
-    // Reload scene from JSON (deterministic, no randomization yet)
+    // Reload scene from JSON (deterministic base state)
     scene_load(sim->scene_path, &sim->world);
     sim->world.dt = sim->dt;
     world_seed(&sim->world, sim->seed);
     
-    // Reset actuator state
+    // Reset actuator state to zero before randomization
     sim->actuator.angle = 0.0f;
     sim->actuator.angular_velocity = 0.0f;
+    
+    // Apply initial-state randomization for learning
+    // This forces feedback control without making episodes unrecoverable
+    
+    printf("[sim_reset] seed=%u, rng_state=%u, actuator_idx=%d\n", 
+           sim->seed, sim->world.rng_state, sim->world.actuator_body_index);
+    
+    // Get beam (actuator) body
+    Body* beam = world_get_body(&sim->world, sim->world.actuator_body_index);
+    if (!beam || beam->shape.type != SHAPE_RECT) {
+        return;  // No randomization if beam is invalid
+    }
+    
+    // Get ball body (hardcoded convention: ball is body 1)
+    const int BALL_BODY_INDEX = 1;
+    Body* ball = world_get_body(&sim->world, BALL_BODY_INDEX);
+    if (!ball) {
+        return;  // No randomization if ball is invalid
+    }
+    
+    // --- Randomize beam angle: uniform in ±5 degrees (±0.087 rad) ---
+    // Generate random value in [-1, 1]
+    float random_angle_norm = world_randf(&sim->world) * 2.0f - 1.0f;
+    float initial_beam_angle = random_angle_norm * RANDOMIZE_BEAM_ANGLE_RAD;
+    printf("[sim_reset] random_angle_norm=%.3f, beam_angle=%.3f\n", 
+           random_angle_norm, initial_beam_angle);
+    
+    // Apply randomized beam angle to actuator
+    sim->actuator.angle = initial_beam_angle;
+    apply_actuator_pose(&sim->world, sim->actuator.angle);
+    
+    // --- Randomize ball position: add random X offset to JSON position ---
+    float beam_half_length = beam->shape.rect.width * 0.5f;
+    
+    // Generate random X offset: ±20% of beam half-length
+    float random_pos_norm = world_randf(&sim->world) * 2.0f - 1.0f;
+    float random_x_offset = random_pos_norm * RANDOMIZE_BALL_POSITION_RATIO * beam_half_length;
+    printf("[sim_reset] random_pos_norm=%.3f, random_x_offset=%.1f px\n", 
+           random_pos_norm, random_x_offset);
+    
+    // Add random X offset to the JSON position (Y stays as-is from JSON)
+    ball->position.x += random_x_offset;
+    
+    // Keep ball velocities at zero (no velocity randomization yet)
+    ball->velocity = VEC2_ZERO;
+    ball->angular_velocity = 0.0f;
 }
 
 // Update actuator dynamics and apply to world

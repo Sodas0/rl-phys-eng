@@ -22,10 +22,18 @@ typedef struct {
     Actuator actuator;  // Actuator state with dynamics
 } Simulator;
 
-// Core API (minimal, no episodes/rewards/randomization yet)
+// Core API
 Simulator* sim_create(const char* scene_path, uint32_t seed, float dt);
 void sim_destroy(Simulator* sim);
+
+// Reset simulator to randomized initial state for learning
+// Applies minimal controlled randomization:
+//   - Ball position: ±20% of beam half-length along beam axis
+//   - Beam angle: ±5 degrees (±0.087 radians)
+//   - All velocities set to zero
+// Uses deterministic RNG seeded with sim->seed for reproducibility
 void sim_reset(Simulator* sim);
+
 void sim_step(Simulator* sim, float action);
 
 // Read-only access to world for rendering

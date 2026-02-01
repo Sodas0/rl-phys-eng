@@ -357,7 +357,16 @@ void world_render_debug(World *w, SDL_Renderer *r) {
 
 void world_seed(World *w, uint32_t seed) {
     // Ensure seed is never 0 (xorshift32 breaks on 0)
-    w->rng_state = (seed == 0) ? 1 : seed;
+    if (seed == 0) seed = 1;
+    
+    // Mix the seed using splitmix32 to avoid poor distribution with small seeds
+    // This ensures that consecutive seeds (1,2,3...) produce well-distributed RNG states
+    uint32_t z = seed + 0x9e3779b9;  // Golden ratio constant
+    z = (z ^ (z >> 16)) * 0x85ebca6b;
+    z = (z ^ (z >> 13)) * 0xc2b2ae35;
+    z = z ^ (z >> 16);
+    
+    w->rng_state = z;
 }
 
 uint32_t world_rand(World *w) {

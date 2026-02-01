@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
     float debug_timer = 0.0f;
     const float DEBUG_PRINT_INTERVAL = 1.0f;
     float total_reward = 0.0f;  // Track cumulative reward  
+    uint32_t episode_count = 0;  // Track number of episodes for randomization  
 
     int running = 1;
     SDL_Event event;
@@ -113,11 +114,12 @@ int main(int argc, char *argv[]) {
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) running = 0;
                 if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R) {
-                    // Reset via environment API
+                    // Reset via environment API with new seed for randomization
+                    sim->seed = episode_count++;
                     result = env_reset(env);
                     total_reward = 0.0f;
-                    printf("Environment reset. Ball pos = (%.2f, %.2f)\n",
-                           result.obs.data[0], result.obs.data[1]);
+                    printf("Environment reset (seed=%u). Ball pos = (%.2f, %.2f)\n",
+                           sim->seed, result.obs.data[0], result.obs.data[1]);
                 }
             }
         }
@@ -150,10 +152,11 @@ int main(int argc, char *argv[]) {
                 printf("Episode ended: %s | Total reward: %+.2f | Steps: %lld\n", 
                        reason, total_reward, step_count);
                 
-                // Auto-reset for continuous operation
+                // Auto-reset for continuous operation with new seed for randomization
+                sim->seed = episode_count++;
                 result = env_reset(env);
                 total_reward = 0.0f;
-                printf("Environment auto-reset. Starting new episode.\n");
+                printf("Environment auto-reset (seed=%u). Starting new episode.\n", sim->seed);
             }
             
             accumulator -= SIM_DT;
