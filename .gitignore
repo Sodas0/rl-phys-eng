@@ -4,6 +4,8 @@ build/
 #binaries
 engine
 sim
+*.so
+*.pt
 
 # IDE
 .cursor/
@@ -14,4 +16,3 @@ sim
 
 .cache/
 .clangd
-compile_commands.json
