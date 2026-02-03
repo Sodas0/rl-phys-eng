@@ -19,7 +19,7 @@
 // Initial-state randomization parameters for learning
 // These ranges force immediate corrective control while keeping all states recoverable
 #define RANDOMIZE_BALL_POSITION_RATIO 0.1f   // ±10% of beam half-length (easier start)
-#define RANDOMIZE_BEAM_ANGLE_RAD 0.175f      // ±10 degrees (≈ ±0.175 radians)
+#define RANDOMIZE_BEAM_ANGLE_RAD 0.524f      // ±30 degrees (≈ ±0.524 radians) - MUCH HARDER!
 
 // Helper: apply actuator pose (matches main.c logic exactly)
 static void apply_actuator_pose(World *world, float angle) {
@@ -66,7 +66,7 @@ Simulator* sim_create(const char* scene_path, uint32_t seed, float dt, int headl
             return NULL;
         }
         
-        sim->window = SDL_CreateWindow("Physics Simulator",
+        sim->window = SDL_CreateWindow("phys-engine",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
         
