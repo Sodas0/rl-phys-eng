@@ -87,6 +87,7 @@ StepResult env_reset(Env* env) {
     return result;
 }
 
+//TODO: Let API configure the reward and termination conditions.
 StepResult env_step(Env* env, Action action) {
     StepResult result = {0};
     
@@ -104,13 +105,27 @@ StepResult env_step(Env* env, Action action) {
     sim_get_observation(env->sim, result.obs.data, OBS_DIM);
     
     // Extract state from observation
-    // obs[0]: beam angle, obs[2]: ball position along beam
+    // obs[0]: beam angle (rad), obs[1]: beam angular velocity (rad/s)
+    // obs[2]: ball position along beam (px), obs[3]: ball velocity along beam (px/s)
     float beam_angle = result.obs.data[0];
+    float beam_angular_velocity = result.obs.data[1];
     float x_along_beam = result.obs.data[2];
+    float vel_along_beam = result.obs.data[3];
     
-    // --- Termination Condition 1: Ball hit the floor (failure) ---
-    // Check if ball has fallen to the bottom boundary
+    // Get beam half-length for early termination threshold
     World* world = sim_get_world(env->sim);
+    Body* beam = NULL;
+    float beam_half_length = 0.0f;
+    
+    if (world) {
+        beam = world_get_body(world, world->actuator_body_index);
+        if (beam && beam->shape.type == SHAPE_RECT) {
+            beam_half_length = beam->shape.rect.width * 0.5f;
+        }
+    }
+    
+    // --- Termination Condition 1: Ball hit the floor (catastrophic failure) ---
+    // Check if ball has fallen to the bottom boundary
     if (world) {
         // Get ball body (hardcoded convention: ball is body 1)
         const int BALL_BODY_INDEX = 1;
@@ -127,7 +142,7 @@ StepResult env_step(Env* env, Action action) {
                 result.terminated = 1;
                 result.truncated = 0;
                 
-                // Terminal penalty for failure (large to discourage)
+                // Large penalty for catastrophic failure
                 result.reward = -10.0f;
                 
                 return result;
@@ -145,14 +160,36 @@ StepResult env_step(Env* env, Action action) {
         // Reward is computed from state below
     }
     
-    // --- Reward Shaping (survival + balance) ---
-    // Primary: survival bonus for staying alive
-    // Secondary: small penalties for poor balance (shaping)
-    if (!result.terminated) {
-        result.reward = 1.0f  // Survival bonus
-                      - fabsf(beam_angle) * 0.1f         // Angle penalty
-                      - fabsf(x_along_beam) * 0.001f;    // Position penalty
-    }
+    // --- Dense Quadratic Reward Shaping ---
+    // Penalize squared deviations from equilibrium (zero position, zero velocities, zero angle)
+    // Quadratic penalties provide stronger gradients when far from equilibrium
+    
+    // Normalize state components for balanced penalty magnitudes
+    // Typical ranges: angle +/-0.5 rad, ang_vel +/-2 rad/s, pos +/-500 px, vel +/-500 px/s
+    float norm_angle = beam_angle / 0.5f;              // normalize to ±1
+    float norm_ang_vel = beam_angular_velocity / 2.0f; // normalize to ±1
+    float norm_pos = x_along_beam / 500.0f;            // normalize to ±1
+    float norm_vel = vel_along_beam / 500.0f;          // normalize to ±1
+    
+    // Compute quadratic penalties (squared deviations)
+    float angle_penalty = norm_angle * norm_angle;
+    float ang_vel_penalty = norm_ang_vel * norm_ang_vel;
+    float pos_penalty = norm_pos * norm_pos;
+    float vel_penalty = norm_vel * norm_vel;
+    
+    // Weight coefficients for penalty terms
+    // Position and angle are primary objectives
+    // Velocities provide damping and discourage oscillation
+    float w_angle = 1.0f;
+    float w_ang_vel = 0.5f;
+    float w_pos = 1.5f;     // Most important reward is to keep ball centered.
+    float w_vel = 0.5f;
+    
+    // Compute total reward (negative of weighted penalty sum)
+    result.reward = -(w_angle * angle_penalty + 
+                     w_ang_vel * ang_vel_penalty + 
+                     w_pos * pos_penalty + 
+                     w_vel * vel_penalty);
     
     return result;
 }
