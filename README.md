@@ -36,7 +36,7 @@ https://github.com/user-attachments/assets/de39ddf9-bbd8-478f-8692-32b7ad2940a2
 
 - C compiler (clang or gcc)
 - SDL2
-- pybinds11
+- pybind11
 
 
 ## Building [instructions wip]
