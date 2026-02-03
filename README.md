@@ -1,8 +1,8 @@
-# RL Physics Environment rl-phys-eng
+# RL Physics Environment
 
 A deterministic 2D physics-based environment written in C, with SDL2 rendering, designed for experimenting with continuous-control reinforcement learning.
 
-This project was built as a minimal sandbox for training RL agents on classic control tasks using physics-based dynamics rather than kinematic shortcuts. The engine supports fixed–time-step simulation, first-order actuator dynamics, and a clean step/reset interface suitable for PPO-style training.
+This project was built as a minimal sandbox for training RL agents on classic control tasks using physics-based dynamics rather than kinematic shortcuts. The engine supports fixed-time-step simulation, first-order actuator dynamics, and a clean step/reset interface suitable for PPO-style training.
 
 The current implementation demonstrates stable learning on tasks such as ball-and-beam balancing, serving as a controlled environment for studying the interaction between physics, control, and learning.
 
